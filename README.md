@@ -83,11 +83,12 @@ python hf_benchmark.py \
 
 ---
 
-## Example Output
-
 > **Note** 
 > The example output shown below is illustrative. Actual benchmark results will vary depending on the model, hardware (CPU/GPU), and Hugging Face Space configuration. Users should rely on their own
 measured results when evaluating performance.
+
+## Example Output
+
 
 ```
 ================================================================================
