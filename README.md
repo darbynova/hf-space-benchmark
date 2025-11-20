@@ -15,11 +15,14 @@ It sends repeated requests to a Gradio queue-based Space, properly handles SSE e
   * Time to first SSE (initial response latency)
   * Stream time (duration of SSE streaming)
   * Total time (end-to-end latency)
+* **Automatic Visualizations**: Generates two professional charts after each benchmark:
+  * **Stacked Bar Chart**: Shows time breakdown per run (Queue → Wait → Stream)
+  * **Grouped Bar Chart**: Shows performance variation (Avg/Min/Max) across metrics
 * **Debug Modes**: Configurable debug flags to inspect POST responses, SSE lines, and model output
 * **Model Output Extraction**: Automatically extracts generated text from SSE stream
 * **Robust Error Handling**: Continues benchmarking even if individual runs fail
 * **Clear Output Formatting**: Well-structured console output with visual separators
-* **Minimal Dependencies**: Only requires the `requests` library (no sseclient)
+* **Minimal Dependencies**: Only requires `requests`, `matplotlib`, and `numpy`
 * **Easy to Extend**: Clean code structure with clear separation of concerns
 
 ---
@@ -29,9 +32,11 @@ It sends repeated requests to a Gradio queue-based Space, properly handles SSE e
 ```
 hf_space_benchmark/
 │
-├── hf_benchmark.py
-├── requirements.txt
-└── README.md
+├── hf_benchmark.py          # Main benchmark script
+├── requirements.txt         # Python dependencies
+├── README.md               # Documentation
+├── benchmark_stacked.png   # Generated stacked bar chart (after run)
+└── benchmark_grouped.png   # Generated grouped bar chart (after run)
 ```
 
 ---
@@ -77,6 +82,11 @@ python hf_benchmark.py \
 ```
 
 ---
+
+Note: The example output shown below is illustrative. Actual benchmark
+results will vary depending on the model, hardware (CPU/GPU), and
+Hugging Face Space configuration. Users should rely on their own
+measured results when evaluating performance.
 
 ## Example Output
 
@@ -137,7 +147,48 @@ Total Time:
   Maximum: 5.326s
 
 ================================================================================
+
+Generating visualizations...
+
+✓ Saved stacked bar chart to: benchmark_stacked.png
+✓ Saved grouped bar chart to: benchmark_grouped.png
+
+================================================================================
+✓ Benchmark complete! Check the generated PNG files for visualizations.
+================================================================================
 ```
+
+---
+
+## Visualizations
+
+The benchmark automatically generates two visualization charts as PNG files:
+
+### 1. Stacked Bar Chart (`benchmark_stacked.png`)
+
+Shows the time breakdown for each run, with three stacked components:
+- **Queue Submit** (blue): Time to submit request and get event_id
+- **Wait for First SSE** (red): Waiting time until first SSE data arrives
+- **Stream Time** (green): Duration of the SSE streaming phase
+
+This chart helps identify:
+- Which phase takes the most time
+- Consistency across runs
+- Potential bottlenecks in the pipeline
+
+### 2. Grouped Bar Chart (`benchmark_grouped.png`)
+
+Shows performance variation across all four metrics with three bars per metric:
+- **Average** (blue): Mean value across all runs
+- **Minimum** (green): Best performance observed
+- **Maximum** (red): Worst performance observed
+
+This chart helps identify:
+- Performance consistency (small gap = consistent, large gap = variable)
+- Which metrics show the most variation
+- Overall performance characteristics
+
+Both charts are saved as high-resolution PNG files (300 DPI) suitable for reports and presentations.
 
 ---
 

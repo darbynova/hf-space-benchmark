@@ -235,6 +235,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+.claude/*
+
 ### macOS Patch ###
 # iCloud generated files
 *.icloud
+
+# Benchmark output files
+benchmark_*.png

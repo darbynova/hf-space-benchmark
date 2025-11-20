@@ -17,6 +17,9 @@ import json
 import time
 import statistics
 import requests
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
 
 # ============================================================================
 # Configuration
@@ -241,6 +244,140 @@ def summarize_metric(name, data):
     )
 
 
+def generate_stacked_bar_chart(results, output_path="benchmark_stacked.png"):
+    """
+    Generate a stacked bar chart showing where time is spent in each run.
+
+    Args:
+        results: List of result dictionaries from benchmark runs
+        output_path: Path to save the chart
+    """
+    if not results:
+        print("⚠ No data to visualize")
+        return
+
+    runs = list(range(1, len(results) + 1))
+
+    # Extract timing components for each run
+    queue_times = [r["queue_submit_time"] for r in results]
+
+    # Calculate time between queue submission and first SSE (waiting time)
+    wait_times = [r["time_to_first_sse"] - r["queue_submit_time"] for r in results]
+
+    # Stream time (actual generation)
+    stream_times = [r["stream_time"] for r in results]
+
+    # Create the stacked bar chart
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    bar_width = 0.6
+    x = np.arange(len(runs))
+
+    # Stack the bars
+    p1 = ax.bar(x, queue_times, bar_width, label='Queue Submit', color='#3498db')
+    p2 = ax.bar(x, wait_times, bar_width, bottom=queue_times,
+                label='Wait for First SSE', color='#e74c3c')
+    p3 = ax.bar(x, stream_times, bar_width,
+                bottom=np.array(queue_times) + np.array(wait_times),
+                label='Stream Time', color='#2ecc71')
+
+    ax.set_xlabel('Run Number', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Time (seconds)', fontsize=12, fontweight='bold')
+    ax.set_title('Benchmark Time Breakdown - Stacked Bar Chart',
+                 fontsize=14, fontweight='bold', pad=20)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f'Run {i}' for i in runs])
+    ax.legend(loc='upper right', framealpha=0.9)
+    ax.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add total time labels on top of bars
+    for i, (q, w, s) in enumerate(zip(queue_times, wait_times, stream_times)):
+        total = q + w + s
+        ax.text(i, total + max(stream_times) * 0.02, f'{total:.2f}s',
+                ha='center', va='bottom', fontweight='bold', fontsize=9)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved stacked bar chart to: {output_path}")
+    plt.close()
+
+
+def generate_grouped_bar_chart(results, output_path="benchmark_grouped.png"):
+    """
+    Generate a grouped bar chart showing avg/min/max for each metric.
+
+    Args:
+        results: List of result dictionaries from benchmark runs
+        output_path: Path to save the chart
+    """
+    if not results:
+        print("⚠ No data to visualize")
+        return
+
+    # Extract metrics
+    metrics = {
+        'Queue Submit': [r["queue_submit_time"] for r in results],
+        'Time to First SSE': [r["time_to_first_sse"] for r in results],
+        'Stream Time': [r["stream_time"] for r in results],
+        'Total Time': [r["total_time"] for r in results]
+    }
+
+    # Calculate statistics for each metric
+    stats = {}
+    for name, values in metrics.items():
+        stats[name] = {
+            'avg': statistics.mean(values),
+            'min': min(values),
+            'max': max(values)
+        }
+
+    # Prepare data for plotting
+    metric_names = list(stats.keys())
+    avg_values = [stats[m]['avg'] for m in metric_names]
+    min_values = [stats[m]['min'] for m in metric_names]
+    max_values = [stats[m]['max'] for m in metric_names]
+
+    # Create the grouped bar chart
+    fig, ax = plt.subplots(figsize=(12, 7))
+
+    x = np.arange(len(metric_names))
+    bar_width = 0.25
+
+    # Create bars for each statistic
+    bars1 = ax.bar(x - bar_width, avg_values, bar_width,
+                   label='Average', color='#3498db', alpha=0.8)
+    bars2 = ax.bar(x, min_values, bar_width,
+                   label='Minimum', color='#2ecc71', alpha=0.8)
+    bars3 = ax.bar(x + bar_width, max_values, bar_width,
+                   label='Maximum', color='#e74c3c', alpha=0.8)
+
+    ax.set_xlabel('Metric', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Time (seconds)', fontsize=12, fontweight='bold')
+    ax.set_title('Benchmark Performance Variation - Grouped Bar Chart',
+                 fontsize=14, fontweight='bold', pad=20)
+    ax.set_xticks(x)
+    ax.set_xticklabels(metric_names, rotation=15, ha='right')
+    ax.legend(loc='upper left', framealpha=0.9)
+    ax.grid(axis='y', alpha=0.3, linestyle='--')
+
+    # Add value labels on bars
+    def add_labels(bars):
+        for bar in bars:
+            height = bar.get_height()
+            ax.text(bar.get_x() + bar.get_width()/2., height,
+                    f'{height:.3f}s',
+                    ha='center', va='bottom', fontsize=8)
+
+    add_labels(bars1)
+    add_labels(bars2)
+    add_labels(bars3)
+
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    print(f"✓ Saved grouped bar chart to: {output_path}")
+    plt.close()
+
+
 # ============================================================================
 # Main Benchmark Loop
 # ============================================================================
@@ -333,6 +470,29 @@ def main():
     print()
     print(summarize_metric("Total Time", total_times))
     print("\n" + "="*80 + "\n")
+
+    # ========================================================================
+    # Generate Visualizations
+    # ========================================================================
+    print("Generating visualizations...")
+    print()
+
+    try:
+        # Generate stacked bar chart showing time breakdown
+        generate_stacked_bar_chart(results, "benchmark_stacked.png")
+
+        # Generate grouped bar chart showing performance variation
+        generate_grouped_bar_chart(results, "benchmark_grouped.png")
+
+        print()
+        print("="*80)
+        print("✓ Benchmark complete! Check the generated PNG files for visualizations.")
+        print("="*80)
+
+    except Exception as e:
+        print(f"⚠ Warning: Could not generate visualizations: {e}")
+        print("  Make sure matplotlib and numpy are installed:")
+        print("  pip install matplotlib numpy")
 
 
 if __name__ == "__main__":
