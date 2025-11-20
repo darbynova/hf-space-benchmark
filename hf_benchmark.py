@@ -37,17 +37,23 @@ def run_once(system_prompt, user_prompt):
         raise RuntimeError("Missing event_id in response")
 
     stream_url = f"{SPACE_URL}/{event_id}"
-    stream_resp = requests.get(stream_url, stream=True)
-    client = sseclient.SSEClient(stream_resp)
+
+    # SSEClient takes a URL and optionally a session
+    client = sseclient.SSEClient(stream_url, session=requests.Session())
 
     first_event_time = None
     last_event_time = None
 
-    for event in client.events():
+    # Iterate directly over client, no .events()
+    for event in client:
         now = time.monotonic()
         if first_event_time is None:
             first_event_time = now
         last_event_time = now
+
+        # If you want to see the payload, uncomment:
+        # if event.data:
+        #     print(event.data)
 
     if first_event_time is None:
         total_time = time.monotonic() - t_start
