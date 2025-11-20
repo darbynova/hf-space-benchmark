@@ -6,7 +6,7 @@ import statistics
 import requests
 import sseclient
 
-SPACE_URL = "https://YOUR-SPACE.hf.space/gradio_api/call/predict"
+SPACE_URL = "https://darbynova-demo-model-deployment.hf.space/gradio_api/call/predict"
 
 
 def run_once(system_prompt, user_prompt):
